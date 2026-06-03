@@ -1,5 +1,32 @@
 {
 	"files.associations": {
 		"*.css": "tailwindcss"
+	},
+	"explorer.fileNesting.enabled": true,
+	"explorer.fileNesting.expand": false,
+	"explorer.fileNesting.patterns": {
+		"+*.svelte": "+${capture}.js, +${capture}.server.js, +${capture}.ts, +${capture}.server.ts",
+		"*.svelte": "${capture}.stories.svelte,${capture}.stories.ts"
+	},
+	"workbench.editor.customLabels.patterns": {
+		// ─── +page ────────────────────────────────────────────────────────────────
+		"**/routes/**/*/+page.{svelte,[tj]s}": "${dirname} ❱ page",
+		"**/routes/+page.{svelte,[tj]s}": "/ ❱ page",
+		"**/routes/**/*/+page.server.[tj]s": "${dirname} ❱ page.server",
+		"**/routes/+page.server.[tj]s": "/ ❱ page.server",
+
+		// ─── +error ───────────────────────────────────────────────────────────────
+		"**/routes/**/*/+error.svelte": "${dirname} ❱ error",
+		"**/routes/+error.svelte": "/ ❱ error",
+
+		// ─── +layout ──────────────────────────────────────────────────────────────
+		"**/routes/**/*/+layout.{svelte,[tj]s}": "${dirname} ❱ layout",
+		"**/routes/+layout.{svelte,[tj]s}": "/ ❱ layout",
+		"**/routes/**/*/+layout.server.[tj]s": "${dirname} ❱ layout.server",
+		"**/routes/+layout.server.[tj]s": "/ ❱ layout.server",
+
+		// ─── +server ──────────────────────────────────────────────────────────────
+		"**/routes/**/*/+server.[tj]s": "${dirname} ❱ API",
+		"**/routes/+server.[tj]s": "/ ❱ API"
 	}
 }
