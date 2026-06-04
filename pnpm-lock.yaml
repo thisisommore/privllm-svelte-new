@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      xxdk-wasm:
+        specifier: file:xxdk-wasm-0.4.3.tgz
+        version: file:xxdk-wasm-0.4.3.tgz
     devDependencies:
       '@eslint/compat':
         specifier: ^2.0.4
@@ -507,6 +511,9 @@ packages:
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
+
+  base32768@5.0.1:
+    resolution: {integrity: sha512-m9WHBAnD1c9OrODuDsB+68na3E+ePIGaVgNocwKe39wyOwT0tJzBuVlGw0osyr3XNI6Q1kgm5inTW70rTEo9kQ==}
 
   brace-expansion@5.0.6:
     resolution: {integrity: sha512-kLpxurY4Z4r9sgMsyG0Z9uzsBlgiU/EFKhj/h91/8yHu0edo7XuixOIH3VcJ8kkxs6/jPzoI6U9Vj3WqbMQ94g==}
@@ -1085,6 +1092,9 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
+  ts.data.json@2.3.1:
+    resolution: {integrity: sha512-pROL7u/hm2V6ptzyRToP8TIHTCGLwK6do/qa4kjoTvijhUDRg8A0vZMO0mPC19rdrqV347GZbVQrxmlDF6fbmg==}
+
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
@@ -1187,6 +1197,10 @@ packages:
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
+
+  xxdk-wasm@file:xxdk-wasm-0.4.3.tgz:
+    resolution: {integrity: sha512-SSpjAo429FcedDhAf4Tbrr9IWQGwGxogy8GVL3QsMNCE8XQEuKQLG0eB9ByKFNIXqoChYvda5iCxCLql5HT6MQ==, tarball: file:xxdk-wasm-0.4.3.tgz}
+    version: 0.4.3
 
   yaml@1.10.3:
     resolution: {integrity: sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA==}
@@ -1595,6 +1609,8 @@ snapshots:
   axobject-query@4.1.0: {}
 
   balanced-match@4.0.4: {}
+
+  base32768@5.0.1: {}
 
   brace-expansion@5.0.6:
     dependencies:
@@ -2086,6 +2102,8 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
+  ts.data.json@2.3.1: {}
+
   tslib@2.8.1:
     optional: true
 
@@ -2157,6 +2175,11 @@ snapshots:
       isexe: 2.0.0
 
   word-wrap@1.2.5: {}
+
+  xxdk-wasm@file:xxdk-wasm-0.4.3.tgz:
+    dependencies:
+      base32768: 5.0.1
+      ts.data.json: 2.3.1
 
   yaml@1.10.3: {}
 
