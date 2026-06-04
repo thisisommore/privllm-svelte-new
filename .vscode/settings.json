@@ -10,7 +10,7 @@
 	},
 	"workbench.editor.customLabels.patterns": {
 		// ─── +page ────────────────────────────────────────────────────────────────
-		"**/routes/**/*/+page.{svelte,[tj]s}": "${dirname} ❱ page",
+		"**/routes/**/*/+page.{svelte,[tj]s}": "/${dirname}",
 		"**/routes/+page.{svelte,[tj]s}": "/ ❱ page",
 		"**/routes/**/*/+page.server.[tj]s": "${dirname} ❱ page.server",
 		"**/routes/+page.server.[tj]s": "/ ❱ page.server",
