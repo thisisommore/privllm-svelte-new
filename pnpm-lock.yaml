@@ -1205,7 +1205,7 @@ packages:
     engines: {node: '>=0.10.0'}
 
   xxdk-wasm@file:xxdk-wasm-0.4.3.tgz:
-    resolution: {integrity: sha512-SSpjAo429FcedDhAf4Tbrr9IWQGwGxogy8GVL3QsMNCE8XQEuKQLG0eB9ByKFNIXqoChYvda5iCxCLql5HT6MQ==, tarball: file:xxdk-wasm-0.4.3.tgz}
+    resolution: {integrity: sha512-ZOtuP1E3nn4fBedBBftXa5nofXP7kLQvZQVlF5DLjjvI7BUsjM96XIsNyHEjkhtawyAaDSrqm1CGSwbOwnZp0Q==, tarball: file:xxdk-wasm-0.4.3.tgz}
     version: 0.4.3
 
   yaml@1.10.3:

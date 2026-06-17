@@ -83,7 +83,7 @@ export const initChat = async () => {
         const raw = await xxdkStore.utils.GenerateChannelIdentity(xxdkStore.cmixId);
         const notifications = await xxdkStore.utils.LoadNotificationsDummy(xxdkStore.cmixId);
         let i = 0;
-        while (!xxdkStore.cmix.ReadyToSend()) {
+        while (!await xxdkStore.cmix.ReadyToSend()) {
             log(++i, 'not ready to send, waiting...');
             progress.value = `not ready to send, waiting... (${i})`;
             await new Promise((resolve) => setTimeout(resolve, 5000));

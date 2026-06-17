@@ -3,7 +3,7 @@ declare module 'xxdk-wasm' {
 		AddHealthCallback: (callback: { Callback: (healthy: boolean) => void }) => number;
 		GetID: () => number;
 		IsReady: (threshold: number) => Uint8Array;
-		ReadyToSend: () => boolean;
+		ReadyToSend: () => Promise<boolean>;
 		StartNetworkFollower: (timeoutMilliseconds: number) => void;
 		StopNetworkFollower: () => void;
 		WaitForNetwork: (timeoutMilliseconds: number) => Promise<void>;
