@@ -1,4 +1,4 @@
-import type { CMix, XXDKUtils, DatabaseCipher } from "xxdk-wasm";
+import type { CMix, XXDKUtils, DatabaseCipher, DMClient } from "xxdk-wasm";
 
 class XXDKStore {
     utils: XXDKUtils | undefined = undefined;
@@ -6,5 +6,6 @@ class XXDKStore {
     cmix: CMix | undefined = undefined;
     encryptedPassword: Uint8Array | undefined = undefined;
     dbCipher: DatabaseCipher | undefined = undefined;
+    dm: DMClient | undefined = undefined
 }
 export const xxdkStore = new XXDKStore();

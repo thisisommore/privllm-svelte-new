@@ -22,11 +22,13 @@
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/node": "^22",
+		"@types/pako": "^2.0.4",
 		"eslint": "^10.2.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.17.0",
 		"globals": "^17.4.0",
 		"mdsvex": "^0.12.7",
+		"pako": "^2.1.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
@@ -39,6 +41,7 @@
 	},
 	"dependencies": {
 		"dexie": "^4.4.3",
+		"dompurify": "^3.4.8",
 		"xxdk-wasm": "file:xxdk-wasm-0.4.3.tgz"
 	}
 }

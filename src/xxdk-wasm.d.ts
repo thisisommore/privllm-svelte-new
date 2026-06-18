@@ -4,7 +4,7 @@ declare module 'xxdk-wasm' {
 		GetID: () => number;
 		IsReady: (threshold: number) => Uint8Array;
 		ReadyToSend: () => Promise<boolean>;
-		StartNetworkFollower: (timeoutMilliseconds: number) => void;
+		StartNetworkFollower: (timeoutMilliseconds: number) => Promise<void>;
 		StopNetworkFollower: () => void;
 		WaitForNetwork: (timeoutMilliseconds: number) => Promise<void>;
 		GetNodeRegistrationStatus: () => Promise<Uint8Array>;
