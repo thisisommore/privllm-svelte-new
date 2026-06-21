@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { initChat } from '$lib/api/chat';
 	import { logger } from '$lib/logger';
-	import { initWasm, progress } from '$lib/xxdk/index.svelte';
+	import { initXXDK, progress } from '$lib/xxdk/index.svelte';
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-center">
 	<br />
 	<button
 		onclick={async () => {
-			await initWasm();
-			logger.log('[privllm] initWasm completed');
+			await initXXDK();
+			logger.log('[privllm] initXXDK completed');
 			initChat();
 		}}>Done</button
 	>

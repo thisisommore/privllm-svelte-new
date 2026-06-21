@@ -14,7 +14,7 @@ class Progress {
 export const progress = new Progress();
 
 const storageDir = 'privllm'
-export const initWasm = async () => {
+export const initXXDK = async () => {
     xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
 
     await createKVStore(storageDir);
