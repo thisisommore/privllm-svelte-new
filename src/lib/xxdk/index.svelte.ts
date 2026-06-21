@@ -10,16 +10,17 @@ class Progress {
 }
 export const progress = new Progress();
 
+const storageDir = 'privllm'
 export const initWasm = () => {
     return new Promise<void>((resolve) => {
         (async () => {
             xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
 
-            await createKVStore('privllm');
+            await createKVStore(storageDir);
             xxdkStore.utils = await xxdk.InitXXDK();
             xxdkStore.encryptedPassword = await xxdkStore.utils.GetOrInitPassword('password');
 
-            await xxdkStore.utils.NewCmix(GetDefaultNDF(), 'privllm', xxdkStore.encryptedPassword, '');
+            await xxdkStore.utils.NewCmix(GetDefaultNDF(), storageDir, xxdkStore.encryptedPassword, '');
 
             const params = xxdkStore.utils.GetDefaultCMixParams();
             // Enable immediate sending (matches speakeasy-web v0.4)
@@ -29,7 +30,7 @@ export const initWasm = () => {
             progress.value = 'loading cmix...';
 
             xxdkStore.cmix = await xxdkStore.utils.LoadCmix(
-                'privllm',
+                storageDir,
                 xxdkStore.encryptedPassword,
                 encodedParams
             );
