@@ -4,8 +4,6 @@
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-center">
-	<h1>Password</h1>
-	<input type="text" placeholder="Enter your password" />
 	<br />
 	<button
 		onclick={async () => {
