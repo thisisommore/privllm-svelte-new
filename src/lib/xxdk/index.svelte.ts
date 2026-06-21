@@ -44,6 +44,38 @@ export const initXXDK = async () => {
     xxdkStore.cmix.AddHealthCallback({
         Callback: healthy => progress.isHealthy = healthy
     });
+
+    const notifications = await xxdkStore.utils!.LoadNotificationsDummy(xxdkStore.cmixId!);
+
+    xxdkStore.dbCipher = await xxdkStore.utils!.NewDatabaseCipher(
+        xxdkStore.cmixId!,
+        xxdkStore.encryptedPassword!,
+        725
+    );
+
+    const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
+
+    xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
+        xxdkStore.cmixId!,
+        notifications.GetID(),
+        xxdkStore.dbCipher!.GetID(),
+        (await dmIndexedDbWorkerPath()).toString(),
+        raw,
+        {
+            EventUpdate: (eventType: number, data: unknown) => {
+                logger.log({ eventType, data });
+
+                // DmMessageReceived = 3000 — WASM has just written a new
+                // message row to IndexedDB. Poke Dexie's storagemutated
+                // event so any liveQuery on the messages table re-runs.
+                if (eventType === 3000) {
+                    getDb(xxdkStore.dm!.GetDatabaseName()).then((db) => {
+                        notifyTableChanged(db, 'messages');
+                    });
+                }
+            }
+        }
+    );
     await setTimeoutPromise(10_000);
     return new Promise<void>((resolve) => {
         const interval = setInterval(async () => {
@@ -59,35 +91,7 @@ export const initXXDK = async () => {
                     progress.status = `Node registration threshold met: ${registered}/${total}`;
                     logger.log(`[privllm] Node registration threshold met (${0.2})`);
                     clearInterval(interval);
-                    const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
-                    const notifications = await xxdkStore.utils!.LoadNotificationsDummy(xxdkStore.cmixId!);
-                    xxdkStore.dbCipher = await xxdkStore.utils!.NewDatabaseCipher(
-                        xxdkStore.cmixId!,
-                        xxdkStore.encryptedPassword!,
-                        725
-                    );
 
-                    xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
-                        xxdkStore.cmixId!,
-                        notifications.GetID(),
-                        xxdkStore.dbCipher!.GetID(),
-                        (await dmIndexedDbWorkerPath()).toString(),
-                        raw,
-                        {
-                            EventUpdate: (eventType: number, data: unknown) => {
-                                logger.log({ eventType, data });
-
-                                // DmMessageReceived = 3000 — WASM has just written a new
-                                // message row to IndexedDB. Poke Dexie's storagemutated
-                                // event so any liveQuery on the messages table re-runs.
-                                if (eventType === 3000) {
-                                    getDb(xxdkStore.dm!.GetDatabaseName()).then((db) => {
-                                        notifyTableChanged(db, 'messages');
-                                    });
-                                }
-                            }
-                        }
-                    );
                     resolve()
                 }
             }
