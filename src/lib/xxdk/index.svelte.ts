@@ -50,8 +50,8 @@ export const initWasm = async () => {
             const statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
             if (statusResult && statusResult instanceof Uint8Array && statusResult.length > 0) {
                 const report = JSON.parse(decoder.decode(statusResult));
-                const registered = report.NumberOfNodesRegistered ?? 0;
-                const total = report.NumberOfNodes ?? 1;
+                const registered = report.NumberOfNodesRegistered;
+                const total = report.NumberOfNodes;
                 progress.status = `Node registration progress: ${registered}/${total}`;
                 logger.log(`[privllm] Node registration progress: ${registered}/${total} nodes`);
 
