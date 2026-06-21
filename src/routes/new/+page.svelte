@@ -15,6 +15,9 @@
 	>
 
 	<div class="m-4 bg-green-500">
-		Status: <span id="status">{progress.value}</span>
+		Status: <span id="status">{progress.status}</span>
+	</div>
+	<div class="m-4 bg-green-500">
+		Network is: <span id="status">{progress.isHealthy ? 'Healthy' : 'Unhealthy'}</span>
 	</div>
 </div>

@@ -8,7 +8,8 @@ import xxdk from 'xxdk-wasm';
 import { xxdkStore } from '../../store';
 const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath } = xxdk;
 class Progress {
-    value = $state('')
+    status = $state('')
+    isHealthy = $state(false)
 }
 export const progress = new Progress();
 
@@ -27,24 +28,22 @@ export const initWasm = async () => {
     const decoded = JSON.parse(decoder.decode(params));
     decoded.Network.EnableImmediateSending = true;
     const encodedParams = new TextEncoder().encode(JSON.stringify(decoded));
-    progress.value = 'loading cmix...';
+    progress.status = 'loading cmix...';
 
     xxdkStore.cmix = await xxdkStore.utils.LoadCmix(
         storageDir,
         xxdkStore.encryptedPassword,
         encodedParams
     );
-    progress.value = 'starting network follower...';
+    progress.status = 'starting network follower...';
     await xxdkStore.cmix.StartNetworkFollower(50000);
-    progress.value = 'waiting for network...';
+    progress.status = 'waiting for network...';
 
     await xxdkStore.cmix.WaitForNetwork(10 * 60 * 1000);
     xxdkStore.cmixId = xxdkStore.cmix.GetID();
-    // xxdkStore.cmix.AddHealthCallback({
-    //     Callback: (healthy: boolean) => {
-    //         progress.value = healthy ? 'connected' : 'disconnected';
-    //     }
-    // });
+    xxdkStore.cmix.AddHealthCallback({
+        Callback: healthy => progress.isHealthy = healthy
+    });
     await setTimeoutPromise(10_000);
     return new Promise<void>((resolve) => {
         const interval = setInterval(async () => {
@@ -53,11 +52,11 @@ export const initWasm = async () => {
                 const report = JSON.parse(decoder.decode(statusResult));
                 const registered = report.NumberOfNodesRegistered ?? 0;
                 const total = report.NumberOfNodes ?? 1;
-                progress.value = `Node registration progress: ${registered}/${total}`;
+                progress.status = `Node registration progress: ${registered}/${total}`;
                 logger.log(`[privllm] Node registration progress: ${registered}/${total} nodes`);
 
                 if (total > 0 && registered / total >= 0.2) {
-                    progress.value = `Node registration threshold met: ${registered}/${total}`;
+                    progress.status = `Node registration threshold met: ${registered}/${total}`;
                     logger.log(`[privllm] Node registration threshold met (${0.2})`);
                     clearInterval(interval);
                     const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
