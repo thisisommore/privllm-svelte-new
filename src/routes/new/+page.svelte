@@ -8,10 +8,9 @@
 	<input type="text" placeholder="Enter your password" />
 	<br />
 	<button
-		onclick={() => {
-			initWasm().then(() => {
-				initChat();
-			});
+		onclick={async () => {
+			await initWasm();
+			initChat();
 		}}>Done</button
 	>
 
