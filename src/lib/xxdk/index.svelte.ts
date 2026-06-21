@@ -92,10 +92,5 @@ export const initWasm = async () => {
                 }
             }
         }, 5000)
-
     })
-
 }
-
-
-
