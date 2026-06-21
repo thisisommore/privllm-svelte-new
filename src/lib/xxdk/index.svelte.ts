@@ -77,24 +77,20 @@ export const initXXDK = async () => {
         }
     );
     await setTimeoutPromise(10_000);
-    return new Promise<void>((resolve) => {
-        const interval = setInterval(async () => {
-            const statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
-            if (statusResult && statusResult instanceof Uint8Array && statusResult.length > 0) {
-                const report = JSON.parse(decoder.decode(statusResult));
-                const registered = report.NumberOfNodesRegistered;
-                const total = report.NumberOfNodes;
-                progress.status = `Node registration progress: ${registered}/${total}`;
-                logger.log(`[privllm] Node registration progress: ${registered}/${total} nodes`);
+    let statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
+    while (!(statusResult && statusResult instanceof Uint8Array && statusResult.length > 0)) {
+        statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
+        await setTimeoutPromise(5_000);
+    }
 
-                if (total > 0 && registered / total >= 0.2) {
-                    progress.status = `Node registration threshold met: ${registered}/${total}`;
-                    logger.log(`[privllm] Node registration threshold met (${0.2})`);
-                    clearInterval(interval);
+    const report = JSON.parse(decoder.decode(statusResult));
+    const registered = report.NumberOfNodesRegistered;
+    const total = report.NumberOfNodes;
+    progress.status = `Node registration progress: ${registered}/${total}`;
+    logger.log(`[privllm] Node registration progress: ${registered}/${total} nodes`);
 
-                    resolve()
-                }
-            }
-        }, 5000)
-    })
+    if (total > 0 && registered / total >= 0.2) {
+        progress.status = `Node registration threshold met: ${registered}/${total}`;
+        logger.log(`[privllm] Node registration threshold met (${0.2})`);
+    }
 }
