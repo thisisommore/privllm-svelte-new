@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { initChat } from '$lib/api/chat';
+	import { SERVER_PUB_CREDS } from '$lib/api/contants';
 	import { logger } from '$lib/logger';
 	import { initXXDK, progress } from '$lib/xxdk/index.svelte';
 </script>
@@ -8,9 +8,10 @@
 	<br />
 	<button
 		onclick={async () => {
-			await initXXDK();
+			const xxdk = await initXXDK();
 			logger.log('[privllm] initXXDK completed');
-			initChat();
+			let chat = await xxdk.newChat();
+			await chat.send('Hello from SvelteKit!', SERVER_PUB_CREDS);
 		}}>Done</button
 	>
 
