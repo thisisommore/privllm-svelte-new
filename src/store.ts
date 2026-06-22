@@ -6,6 +6,7 @@ class XXDKStore {
     cmix: CMix | undefined = undefined;
     encryptedPassword: Uint8Array | undefined = undefined;
     dbCipher: DatabaseCipher | undefined = undefined;
+    notifications: Awaited<ReturnType<XXDKUtils["LoadNotificationsDummy"]>> | undefined = undefined
     dm: DMClient | undefined = undefined
 }
 export const xxdkStore = new XXDKStore();

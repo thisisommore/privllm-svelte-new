@@ -10,7 +10,53 @@ type TXXDKChat = {
     live: () => Promise<void>
 }
 
+const waitForNodeRegistrations = async () => {
+    await setTimeoutPromise(10_000);
+    let statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
+    while (!(statusResult && statusResult instanceof Uint8Array && statusResult.length > 0)) {
+        statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
+        await setTimeoutPromise(5_000);
+    }
 
+    const report = JSON.parse(decoder.decode(statusResult));
+    const registered = report.NumberOfNodesRegistered;
+    const total = report.NumberOfNodes;
+    progress.status = `Node registration progress: ${registered}/${total}`;
+    logger.log(`[privllm] Node registration progress: ${registered}/${total} nodes`);
+
+    if (total > 0 && registered / total >= 0.2) {
+        progress.status = `Node registration threshold met: ${registered}/${total}`;
+        logger.log(`[privllm] Node registration threshold met (${0.2})`);
+    }
+}
+
+async function newChat(): Promise<XXDKChat> {
+    const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
+
+    xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
+        xxdkStore.cmixId!,
+        xxdkStore.notifications!.GetID(),
+        xxdkStore.dbCipher!.GetID(),
+        (await dmIndexedDbWorkerPath()).toString(),
+        raw,
+        {
+            EventUpdate: (eventType: number, data: unknown) => {
+                logger.log({ eventType, data });
+
+                // DmMessageReceived = 3000 — WASM has just written a new
+                // message row to IndexedDB. Poke Dexie's storagemutated
+                // event so any liveQuery on the messages table re-runs.
+                if (eventType === 3000) {
+                    getDb(xxdkStore.dm!.GetDatabaseName()).then((db) => {
+                        notifyTableChanged(db, 'messages');
+                    });
+                }
+            }
+        }
+    );
+
+    return new XXDKChat()
+}
 class XXDKChat implements TXXDKChat {
     messages = $state<DmMessage[]>([]);
     unsubscribe: (() => void) | undefined = undefined
@@ -73,6 +119,15 @@ class Progress {
 export const progress = new Progress();
 
 const storageDir = 'privllm'
+
+const getCMixxParams = () => {
+    const params = xxdkStore.utils!.GetDefaultCMixParams();
+    // Enable immediate sending (matches speakeasy-web v0.4)
+    const decoded = JSON.parse(decoder.decode(params));
+    decoded.Network.EnableImmediateSending = true;
+    const encodedParams = new TextEncoder().encode(JSON.stringify(decoded));
+    return encodedParams
+}
 export const initXXDK = async (): Promise<XXDK> => {
     xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
 
@@ -82,17 +137,12 @@ export const initXXDK = async (): Promise<XXDK> => {
 
     await xxdkStore.utils.NewCmix(GetDefaultNDF(), storageDir, xxdkStore.encryptedPassword, '');
 
-    const params = xxdkStore.utils.GetDefaultCMixParams();
-    // Enable immediate sending (matches speakeasy-web v0.4)
-    const decoded = JSON.parse(decoder.decode(params));
-    decoded.Network.EnableImmediateSending = true;
-    const encodedParams = new TextEncoder().encode(JSON.stringify(decoded));
     progress.status = 'loading cmix...';
 
     xxdkStore.cmix = await xxdkStore.utils.LoadCmix(
         storageDir,
         xxdkStore.encryptedPassword,
-        encodedParams
+        getCMixxParams()
     );
     progress.status = 'starting network follower...';
     await xxdkStore.cmix.StartNetworkFollower(50000);
@@ -104,7 +154,7 @@ export const initXXDK = async (): Promise<XXDK> => {
         Callback: healthy => progress.isHealthy = healthy
     });
 
-    const notifications = await xxdkStore.utils!.LoadNotificationsDummy(xxdkStore.cmixId!);
+    xxdkStore.notifications = await xxdkStore.utils!.LoadNotificationsDummy(xxdkStore.cmixId!);
 
     xxdkStore.dbCipher = await xxdkStore.utils!.NewDatabaseCipher(
         xxdkStore.cmixId!,
@@ -113,51 +163,41 @@ export const initXXDK = async (): Promise<XXDK> => {
     );
 
 
-    await setTimeoutPromise(10_000);
-    let statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
-    while (!(statusResult && statusResult instanceof Uint8Array && statusResult.length > 0)) {
-        statusResult = await xxdkStore.cmix!.GetNodeRegistrationStatus();
-        await setTimeoutPromise(5_000);
+    await waitForNodeRegistrations()
+
+    return {
+        newChat: newChat
     }
+}
+export const loadXXDK = async (): Promise<XXDK> => {
+    xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
 
-    const report = JSON.parse(decoder.decode(statusResult));
-    const registered = report.NumberOfNodesRegistered;
-    const total = report.NumberOfNodes;
-    progress.status = `Node registration progress: ${registered}/${total}`;
-    logger.log(`[privllm] Node registration progress: ${registered}/${total} nodes`);
+    xxdkStore.utils = await xxdk.InitXXDK();
+    xxdkStore.encryptedPassword = await xxdkStore.utils.GetOrInitPassword('password');
 
-    if (total > 0 && registered / total >= 0.2) {
-        progress.status = `Node registration threshold met: ${registered}/${total}`;
-        logger.log(`[privllm] Node registration threshold met (${0.2})`);
-    }
+    progress.status = 'loading cmix...';
+    xxdkStore.cmix = await xxdkStore.utils.LoadCmix(storageDir, xxdkStore.encryptedPassword, getCMixxParams());
 
-    async function newChat(): Promise<XXDKChat> {
-        const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
+    progress.status = 'starting network follower...';
+    await xxdkStore.cmix.StartNetworkFollower(50000);
+    progress.status = 'waiting for network...';
 
-        xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
-            xxdkStore.cmixId!,
-            notifications.GetID(),
-            xxdkStore.dbCipher!.GetID(),
-            (await dmIndexedDbWorkerPath()).toString(),
-            raw,
-            {
-                EventUpdate: (eventType: number, data: unknown) => {
-                    logger.log({ eventType, data });
+    await xxdkStore.cmix.WaitForNetwork(10 * 60 * 1000);
+    xxdkStore.cmixId = xxdkStore.cmix.GetID();
+    xxdkStore.cmix.AddHealthCallback({
+        Callback: healthy => progress.isHealthy = healthy
+    });
 
-                    // DmMessageReceived = 3000 — WASM has just written a new
-                    // message row to IndexedDB. Poke Dexie's storagemutated
-                    // event so any liveQuery on the messages table re-runs.
-                    if (eventType === 3000) {
-                        getDb(xxdkStore.dm!.GetDatabaseName()).then((db) => {
-                            notifyTableChanged(db, 'messages');
-                        });
-                    }
-                }
-            }
-        );
+    xxdkStore.notifications = await xxdkStore.utils!.LoadNotificationsDummy(xxdkStore.cmixId!);
 
-        return new XXDKChat()
-    }
+    xxdkStore.dbCipher = await xxdkStore.utils!.NewDatabaseCipher(
+        xxdkStore.cmixId!,
+        xxdkStore.encryptedPassword!,
+        725
+    );
+
+    await waitForNodeRegistrations()
+
     return {
         newChat: newChat
     }
