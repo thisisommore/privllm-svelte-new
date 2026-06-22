@@ -1,20 +1,70 @@
-import { getDb, notifyTableChanged } from '$lib/db';
+import { getDb, notifyTableChanged, type DmMessage } from '$lib/db';
 const decoder = new TextDecoder();
 import { logger } from "$lib/logger"
 import { resolve } from '$app/paths';
 import { goto } from '$app/navigation';
 
 const setTimeoutPromise = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-type XXDKChat = {
+type TXXDKChat = {
     send: (message: string, recipient: { pubKey: Uint8Array<ArrayBuffer>, token: number }) => Promise<void>;
     live: () => Promise<void>
 }
-type XXDK = {
+
+
+class XXDKChat implements TXXDKChat {
+    messages = $state<DmMessage[]>([]);
+    unsubscribe: (() => void) | undefined = undefined
+    live = async () => {
+        if (!xxdkStore.dm) return;
+        const db = await getDb(xxdkStore.dm.GetDatabaseName());
+        const sub = liveQuery(() => db.messages.toArray()).subscribe(async (rows) => {
+            if (!xxdkStore.dbCipher) return;
+            this.messages = await Promise.all(
+                rows.map(async (row) => ({
+                    ...row,
+                    text: await decodeDmText(row.text)
+                }))
+            );
+        });
+
+        this.unsubscribe = () => sub.unsubscribe();
+    }
+    send = async (message: string, recipient: { pubKey: Uint8Array<ArrayBuffer>; token: number; }) => {
+        let i = 0;
+        const intervalA = setInterval(async () => {
+            if (await xxdkStore.cmix!.ReadyToSend()) {
+                clearInterval(intervalA);
+                progress.status = `ready to send`;
+                progress.status = `sending`;
+                try {
+                    await xxdkStore.dm!.SendText(
+                        recipient.pubKey,
+                        recipient.token,
+                        message,
+                        30_000,
+                        new Uint8Array()
+                    )
+                    progress.status = `Message sent!`;
+                    await goto(resolve('/chat'));
+                } catch (error) {
+                    progress.status = 'message sent failed';
+                }
+                return
+            }
+
+            logger.log(++i, 'not ready to send, waiting...', await xxdkStore.cmix!.ReadyToSend());
+            progress.status = `not ready to send, waiting... (${i})`;
+        }, 5000)
+    }
+}
+
+export type XXDK = {
     newChat: () => Promise<XXDKChat>;
 }
 import xxdk from 'xxdk-wasm';
 import { xxdkStore } from '../../store';
+import { liveQuery } from 'dexie';
+import { decodeDmText } from './coding';
 const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath } = xxdk;
 class Progress {
     status = $state('')
@@ -106,36 +156,7 @@ export const initXXDK = async (): Promise<XXDK> => {
             }
         );
 
-        return {
-            send: async (message, recipent) => {
-                let i = 0;
-                const intervalA = setInterval(async () => {
-                    if (await xxdkStore.cmix!.ReadyToSend()) {
-                        clearInterval(intervalA);
-                        progress.status = `ready to send`;
-                        progress.status = `sending`;
-                        try {
-                            await xxdkStore.dm!.SendText(
-                                recipent.pubKey,
-                                recipent.token,
-                                message,
-                                30_000,
-                                new Uint8Array()
-                            )
-                            progress.status = `Message sent!`;
-                            await goto(resolve('/chat'));
-                        } catch (error) {
-                            progress.status = 'message sent failed';
-                        }
-                        return
-                    }
-
-                    logger.log(++i, 'not ready to send, waiting...', await xxdkStore.cmix!.ReadyToSend());
-                    progress.status = `not ready to send, waiting... (${i})`;
-                }, 5000)
-            },
-            live: async () => { }
-        }
+        return new XXDKChat()
     }
     return {
         newChat: newChat
