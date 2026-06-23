@@ -1,6 +1,8 @@
 declare module 'xxdk-wasm' {
 	export type CMix = {
 		AddHealthCallback: (callback: { Callback: (healthy: boolean) => void }) => number;
+		EKVGet: (key: string) => Promise<Uint8Array>;
+		EKVSet: (key: string, value: Uint8Array) => Promise<void>;
 		GetID: () => number;
 		IsReady: (threshold: number) => Uint8Array;
 		ReadyToSend: () => Promise<boolean>;

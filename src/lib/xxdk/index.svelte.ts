@@ -1,8 +1,6 @@
 import { getDb, notifyTableChanged, type DmMessage } from '$lib/db';
 const decoder = new TextDecoder();
 import { logger } from "$lib/logger"
-import { resolve } from '$app/paths';
-import { goto } from '$app/navigation';
 
 const setTimeoutPromise = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 type TXXDKChat = {
@@ -30,15 +28,51 @@ const waitForNodeRegistrations = async () => {
     }
 }
 
+type ChatsStorage = {
+    //base64
+    raw: string
+}[]
 async function newChat(): Promise<XXDKChat> {
     const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
-
+    const chatsStorage: ChatsStorage = [{ raw: raw.toBase64() }]
+    const encoded = new TextEncoder().encode(JSON.stringify(chatsStorage));
+    await xxdkStore.cmix!.EKVSet("xxdk-store", encoded)
     xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
         xxdkStore.cmixId!,
         xxdkStore.notifications!.GetID(),
         xxdkStore.dbCipher!.GetID(),
         (await dmIndexedDbWorkerPath()).toString(),
         raw,
+        {
+            EventUpdate: (eventType: number, data: unknown) => {
+                logger.log({ eventType, data });
+
+                // DmMessageReceived = 3000 — WASM has just written a new
+                // message row to IndexedDB. Poke Dexie's storagemutated
+                // event so any liveQuery on the messages table re-runs.
+                if (eventType === 3000) {
+                    getDb(xxdkStore.dm!.GetDatabaseName()).then((db) => {
+                        notifyTableChanged(db, 'messages');
+                    });
+                }
+            }
+        }
+    );
+
+    return new XXDKChat()
+}
+
+async function loadChat(): Promise<XXDKChat> {
+    const encoded = await xxdkStore.cmix!.EKVGet("xxdk-store")
+    const decoded = JSON.parse(decoder.decode(encoded)) as ChatsStorage;
+
+    logger.log("loadChat", decoded)
+    xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
+        xxdkStore.cmixId!,
+        xxdkStore.notifications!.GetID(),
+        xxdkStore.dbCipher!.GetID(),
+        (await dmIndexedDbWorkerPath()).toString(),
+        Uint8Array.fromBase64(decoded[0].raw),
         {
             EventUpdate: (eventType: number, data: unknown) => {
                 logger.log({ eventType, data });
@@ -91,7 +125,6 @@ class XXDKChat implements TXXDKChat {
                         new Uint8Array()
                     )
                     progress.status = `Message sent!`;
-                    await goto(resolve('/chat'));
                 } catch (error) {
                     progress.status = 'message sent failed';
                 }
@@ -106,6 +139,7 @@ class XXDKChat implements TXXDKChat {
 
 export type XXDK = {
     newChat: () => Promise<XXDKChat>;
+    loadChat: () => Promise<XXDKChat>;
 }
 import xxdk from 'xxdk-wasm';
 import { xxdkStore } from '../../store';
@@ -166,11 +200,13 @@ export const initXXDK = async (): Promise<XXDK> => {
     await waitForNodeRegistrations()
 
     return {
-        newChat: newChat
+        newChat: newChat,
+        loadChat: loadChat
     }
 }
 export const loadXXDK = async (): Promise<XXDK> => {
     xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
+    await createKVStore(storageDir);
 
     xxdkStore.utils = await xxdk.InitXXDK();
     xxdkStore.encryptedPassword = await xxdkStore.utils.GetOrInitPassword('password');
@@ -199,6 +235,7 @@ export const loadXXDK = async (): Promise<XXDK> => {
     await waitForNodeRegistrations()
 
     return {
-        newChat: newChat
+        newChat: newChat,
+        loadChat: loadChat
     }
 }
