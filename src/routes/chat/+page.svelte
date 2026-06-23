@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { xxdkStore } from '../../store';
+	import { xxdkStore } from '../../store.svelte';
 	import { getDb, type DmMessage } from '$lib/db';
 	import { liveQuery } from 'dexie';
 	import { decodeDmText } from '$lib/xxdk/coding';
+	import { progress } from '$lib/xxdk/index.svelte';
 
 	let messages = $state<DmMessage[]>([]);
 
@@ -28,9 +29,15 @@
 		})();
 		return () => unsubscribe();
 	});
+
+	const newChat = async () => {
+		await xxdkStore.xxdk!.newChat();
+	};
 </script>
 
 <h1>Chat</h1>
+<button onclick={newChat}>New Chaty</button>
+{xxdkStore.totalChats} Chats
 {#each messages as msg (msg.id)}
 	<div class="message">
 		<div class="header">
@@ -40,3 +47,4 @@
 		<div class="body" class:rich={msg.text}>{@html msg.text}</div>
 	</div>
 {/each}
+Status: {progress.status}

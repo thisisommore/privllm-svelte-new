@@ -28,13 +28,32 @@ const waitForNodeRegistrations = async () => {
     }
 }
 
+async function EKVGet(key: string) {
+    try {
+        return await xxdkStore.cmix!.EKVGet(key)
+    } catch (error) {
+        if ((error as Error).message.includes("file does not exist")) {
+            logger.log("well error but we handled it", error)
+            return undefined
+        }
+        throw error
+    }
+}
+
 type ChatsStorage = {
     //base64
     raw: string
 }[]
 async function newChat(): Promise<XXDKChat> {
+    const encodedFetch = await xxdkStore.xxdk?.EKVGet("xxdk-store")
+    let chatsStorage: ChatsStorage = []
+    if (encodedFetch) {
+        const decoded = JSON.parse(decoder.decode(encodedFetch)) as ChatsStorage;
+        chatsStorage = decoded
+    }
+
     const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
-    const chatsStorage: ChatsStorage = [{ raw: raw.toBase64() }]
+    chatsStorage.push({ raw: raw.toBase64() })
     const encoded = new TextEncoder().encode(JSON.stringify(chatsStorage));
     await xxdkStore.cmix!.EKVSet("xxdk-store", encoded)
     xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
@@ -59,12 +78,15 @@ async function newChat(): Promise<XXDKChat> {
         }
     );
 
+    xxdkStore.totalChats += 1
+
     return new XXDKChat()
 }
 
-async function loadChat(): Promise<XXDKChat> {
+async function loadChat(i: number): Promise<XXDKChat> {
     const encoded = await xxdkStore.cmix!.EKVGet("xxdk-store")
     const decoded = JSON.parse(decoder.decode(encoded)) as ChatsStorage;
+    xxdkStore.totalChats = decoded.length
 
     logger.log("loadChat", decoded)
     xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
@@ -72,7 +94,7 @@ async function loadChat(): Promise<XXDKChat> {
         xxdkStore.notifications!.GetID(),
         xxdkStore.dbCipher!.GetID(),
         (await dmIndexedDbWorkerPath()).toString(),
-        Uint8Array.fromBase64(decoded[0].raw),
+        Uint8Array.fromBase64(decoded[i].raw),
         {
             EventUpdate: (eventType: number, data: unknown) => {
                 logger.log({ eventType, data });
@@ -90,6 +112,12 @@ async function loadChat(): Promise<XXDKChat> {
     );
 
     return new XXDKChat()
+}
+
+async function totalChats() {
+    const encoded = await xxdkStore.cmix!.EKVGet("xxdk-store")
+    const decoded = JSON.parse(decoder.decode(encoded)) as ChatsStorage;
+    return decoded.length
 }
 class XXDKChat implements TXXDKChat {
     messages = $state<DmMessage[]>([]);
@@ -139,10 +167,12 @@ class XXDKChat implements TXXDKChat {
 
 export type XXDK = {
     newChat: () => Promise<XXDKChat>;
-    loadChat: () => Promise<XXDKChat>;
+    loadChat: (i: number) => Promise<XXDKChat>;
+    totalChats: () => Promise<number>
+    EKVGet: (key: string) => Promise<Uint8Array | undefined>
 }
 import xxdk from 'xxdk-wasm';
-import { xxdkStore } from '../../store';
+import { xxdkStore } from '../../store.svelte';
 import { liveQuery } from 'dexie';
 import { decodeDmText } from './coding';
 const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath } = xxdk;
@@ -201,7 +231,9 @@ export const initXXDK = async (): Promise<XXDK> => {
 
     return {
         newChat: newChat,
-        loadChat: loadChat
+        loadChat: loadChat,
+        totalChats: totalChats,
+        EKVGet: EKVGet
     }
 }
 export const loadXXDK = async (): Promise<XXDK> => {
@@ -236,6 +268,8 @@ export const loadXXDK = async (): Promise<XXDK> => {
 
     return {
         newChat: newChat,
-        loadChat: loadChat
+        loadChat: loadChat,
+        totalChats: totalChats,
+        EKVGet: EKVGet
     }
 }

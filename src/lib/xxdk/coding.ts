@@ -2,7 +2,7 @@
 import DOMPurify from 'dompurify';
 
 import pako from 'pako';
-import { xxdkStore } from '../../store';
+import { xxdkStore } from '../../store.svelte';
 import { SANITIZE_CONFIG } from './domSanitize';
 
 
