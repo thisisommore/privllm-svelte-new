@@ -1,12 +1,23 @@
 import { getDb, notifyTableChanged, type DmMessage } from '$lib/db';
 const decoder = new TextDecoder();
 import { logger } from "$lib/logger"
+import xxdk from 'xxdk-wasm';
+import { xxdkStore } from '../../store.svelte';
+import { liveQuery } from 'dexie';
+import { decodeDmText } from './coding';
+import { setTimeoutPromise } from '$lib/utils';
+const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath } = xxdk;
 
-const setTimeoutPromise = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 type TXXDKChat = {
     send: (message: string, recipient: { pubKey: Uint8Array<ArrayBuffer>, token: number }) => Promise<void>;
     live: () => Promise<void>
 }
+
+class Progress {
+    status = $state('')
+    isHealthy = $state(false)
+}
+export const progress = new Progress();
 
 const waitForNodeRegistrations = async () => {
     await setTimeoutPromise(10_000);
@@ -20,11 +31,9 @@ const waitForNodeRegistrations = async () => {
     const registered = report.NumberOfNodesRegistered;
     const total = report.NumberOfNodes;
     progress.status = `Node registration progress: ${registered}/${total}`;
-    logger.log(`[privllm] Node registration progress: ${registered}/${total} nodes`);
 
     if (total > 0 && registered / total >= 0.2) {
         progress.status = `Node registration threshold met: ${registered}/${total}`;
-        logger.log(`[privllm] Node registration threshold met (${0.2})`);
     }
 }
 
@@ -48,8 +57,7 @@ async function newChat(): Promise<XXDKChat> {
     const encodedFetch = await xxdkStore.xxdk?.EKVGet("xxdk-store")
     let chatsStorage: ChatsStorage = []
     if (encodedFetch) {
-        const decoded = JSON.parse(decoder.decode(encodedFetch)) as ChatsStorage;
-        chatsStorage = decoded
+        chatsStorage = JSON.parse(decoder.decode(encodedFetch)) as ChatsStorage;
     }
 
     const raw = await xxdkStore.utils!.GenerateChannelIdentity(xxdkStore.cmixId!);
@@ -88,7 +96,6 @@ async function loadChat(i: number): Promise<XXDKChat> {
     const decoded = JSON.parse(decoder.decode(encoded)) as ChatsStorage;
     xxdkStore.totalChats = decoded.length
 
-    logger.log("loadChat", decoded)
     xxdkStore.dm = await xxdkStore.utils!.NewDMClientWithIndexedDb(
         xxdkStore.cmixId!,
         xxdkStore.notifications!.GetID(),
@@ -142,7 +149,6 @@ class XXDKChat implements TXXDKChat {
         const intervalA = setInterval(async () => {
             if (await xxdkStore.cmix!.ReadyToSend()) {
                 clearInterval(intervalA);
-                progress.status = `ready to send`;
                 progress.status = `sending`;
                 try {
                     await xxdkStore.dm!.SendText(
@@ -171,16 +177,8 @@ export type XXDK = {
     totalChats: () => Promise<number>
     EKVGet: (key: string) => Promise<Uint8Array | undefined>
 }
-import xxdk from 'xxdk-wasm';
-import { xxdkStore } from '../../store.svelte';
-import { liveQuery } from 'dexie';
-import { decodeDmText } from './coding';
-const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath } = xxdk;
-class Progress {
-    status = $state('')
-    isHealthy = $state(false)
-}
-export const progress = new Progress();
+
+
 
 const storageDir = 'privllm'
 
