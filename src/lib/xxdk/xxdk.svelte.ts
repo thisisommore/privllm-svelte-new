@@ -8,9 +8,8 @@ import { type CMix, type DatabaseCipher, type DMClient, type XXDKUtils } from "x
 import { progress } from "./index.svelte";
 const storageDir = 'privllm'
 const getCMixxParams = (baseParams: Uint8Array<ArrayBufferLike>) => {
-    const params = baseParams
     // Enable immediate sending (matches speakeasy-web v0.4)
-    const decoded = JSON.parse(new TextDecoder().decode(params));
+    const decoded = JSON.parse(new TextDecoder().decode(baseParams));
     decoded.Network.EnableImmediateSending = true;
     const encodedParams = new TextEncoder().encode(JSON.stringify(decoded));
     return encodedParams
