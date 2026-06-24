@@ -19,6 +19,7 @@ type ChatsStorage = {
     //base64
     raw: string
     title: string
+    id: string
 }[]
 
 type Notifications = Awaited<ReturnType<XXDKUtils["LoadNotificationsDummy"]>>
@@ -149,7 +150,7 @@ export class XXDK {
 
     async newChat() {
         const raw = await this.utils!.GenerateChannelIdentity(this.cmix.GetID());
-        this.chats.push({ raw: raw.toBase64(), title: new Date().toDateString() })
+        this.chats.push({ raw: raw.toBase64(), title: new Date().toDateString(), id: crypto.randomUUID() })
         const encoded = new TextEncoder().encode(JSON.stringify(this.chats));
         await this.cmix.EKVSet("xxdk-store", encoded)
         this.dm = await this.makeDMClient(raw)
