@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { xxdkStore } from '../../store.svelte';
+	import { globalStore } from '../../store.svelte';
 	import { getDb, type DmMessage } from '$lib/db';
 	import { liveQuery } from 'dexie';
 	import { decodeDmText } from '$lib/xxdk/coding';
@@ -10,7 +10,6 @@
 
 	// Decode encrypted rows into display rows. Runs whenever the live query emits.
 	async function decodeRows(rows: DmMessage[]) {
-		if (!xxdkStore.dbCipher) return;
 		messages = await Promise.all(
 			rows.map(async (row) => ({
 				...row,
@@ -22,8 +21,8 @@
 	onMount(() => {
 		let unsubscribe = () => {};
 		(async () => {
-			if (!xxdkStore.dm) return;
-			const db = await getDb(xxdkStore.dm.GetDatabaseName());
+			if (!globalStore.xxdk!.dm) return;
+			const db = await getDb(globalStore.xxdk!.dm.GetDatabaseName());
 			const sub = liveQuery(() => db.messages.toArray()).subscribe((rows) => decodeRows(rows));
 			unsubscribe = () => sub.unsubscribe();
 		})();
@@ -31,13 +30,13 @@
 	});
 
 	const newChat = async () => {
-		await xxdkStore.xxdk!.newChat();
+		await globalStore.xxdk!.newChat();
 	};
 </script>
 
 <h1>Chat</h1>
 <button onclick={newChat}>New Chaty</button>
-{xxdkStore.totalChats} Chats
+{globalStore.xxdk!.totalChats} Chats
 {#each messages as msg (msg.id)}
 	<div class="message">
 		<div class="header">

@@ -1,0 +1,184 @@
+import { getDb, notifyTableChanged } from "$lib/db"
+import { logger } from "$lib/logger"
+import { setTimeoutPromise } from "$lib/utils"
+
+import xxdk from 'xxdk-wasm';
+const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath, } = xxdk
+import { type CMix, type DatabaseCipher, type DMClient, type XXDKUtils } from "xxdk-wasm"
+import { progress } from "./index.svelte";
+const storageDir = 'privllm'
+const getCMixxParams = (baseParams: Uint8Array<ArrayBufferLike>) => {
+    const params = baseParams
+    // Enable immediate sending (matches speakeasy-web v0.4)
+    const decoded = JSON.parse(new TextDecoder().decode(params));
+    decoded.Network.EnableImmediateSending = true;
+    const encodedParams = new TextEncoder().encode(JSON.stringify(decoded));
+    return encodedParams
+}
+
+type ChatsStorage = {
+    //base64
+    raw: string
+}[]
+
+type Notifications = Awaited<ReturnType<XXDKUtils["LoadNotificationsDummy"]>>
+export class XXDK {
+    static decoder = new TextDecoder();
+
+    cmix: CMix
+    utils: XXDKUtils
+    dm: DMClient | undefined
+    notifications: Notifications;
+    dbCipher: DatabaseCipher;
+    totalChats = $state(0);
+    status = $state("")
+    constructor(cmix: CMix, utils: XXDKUtils, notifications: Notifications, dbCipher: DatabaseCipher) {
+        this.cmix = cmix
+        this.utils = utils
+        this.notifications = notifications
+        this.dbCipher = dbCipher
+    }
+    static async new() {
+        return XXDK.setupXXDK(true)
+    }
+    static async load() {
+        return XXDK.setupXXDK(false)
+    }
+
+    static async setupXXDK(newCmix: boolean) {
+        xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
+
+        await createKVStore(storageDir);
+        const utils = await xxdk.InitXXDK();
+        const encryptedPassword = await utils.GetOrInitPassword('password');
+        if (newCmix)
+            await utils.NewCmix(GetDefaultNDF(), storageDir, encryptedPassword, '');
+
+        progress.status = 'loading cmix...';
+
+        const cmix = await utils.LoadCmix(
+            storageDir,
+            encryptedPassword,
+            getCMixxParams(utils.GetDefaultCMixParams())
+        );
+        progress.status = 'starting network follower...';
+        await cmix.StartNetworkFollower(50000);
+        progress.status = 'waiting for network...';
+
+        await cmix.WaitForNetwork(10 * 60 * 1000);
+        cmix.AddHealthCallback({
+            Callback: healthy => progress.isHealthy = healthy
+        });
+
+        const notifications = await utils!.LoadNotificationsDummy(cmix.GetID());
+
+        const dbCipher = await utils!.NewDatabaseCipher(
+            cmix.GetID(),
+            encryptedPassword!,
+            725
+        );
+
+        await setTimeoutPromise(10_000);
+        let statusResult = await cmix.GetNodeRegistrationStatus();
+        while (!(statusResult && statusResult instanceof Uint8Array && statusResult.length > 0)) {
+            statusResult = await cmix.GetNodeRegistrationStatus();
+            await setTimeoutPromise(5_000);
+        }
+
+        const report = JSON.parse(XXDK.decoder.decode(statusResult));
+        const registered = report.NumberOfNodesRegistered;
+        const total = report.NumberOfNodes;
+        progress.status = `Node registration progress: ${registered}/${total}`;
+
+        if (total > 0 && registered / total >= 0.2) {
+            progress.status = `Node registration threshold met: ${registered}/${total}`;
+        }
+        return new XXDK(cmix, utils, notifications, dbCipher)
+    }
+
+
+
+    async EKVGet(key: string) {
+        try {
+            return await this.cmix.EKVGet(key)
+        } catch (error) {
+            if ((error as Error).message.includes("file does not exist")) {
+                logger.log("well error but we handled it", error)
+                return undefined
+            }
+            throw error
+        }
+    }
+
+    async makeDMClient(auth: Uint8Array<ArrayBufferLike>) {
+        return this.utils.NewDMClientWithIndexedDb(
+            this.cmix.GetID(),
+            this.notifications.GetID(),
+            this.dbCipher.GetID(),
+            (await dmIndexedDbWorkerPath()).toString(),
+            auth,
+            {
+                EventUpdate: (eventType: number, data: unknown) => {
+                    logger.log({ eventType, data });
+
+                    // DmMessageReceived = 3000 — WASM has just written a new
+                    // message row to IndexedDB. Poke Dexie's storagemutated
+                    // event so any liveQuery on the messages table re-runs.
+                    if (eventType === 3000) {
+                        getDb(this.dm!.GetDatabaseName()).then((db) => {
+                            notifyTableChanged(db, 'messages');
+                        });
+                    }
+                }
+            }
+        );
+    }
+
+    async newChat() {
+        const encodedFetch = await this.EKVGet("xxdk-store")
+        let chatsStorage: ChatsStorage = []
+        if (encodedFetch) {
+            chatsStorage = JSON.parse(XXDK.decoder.decode(encodedFetch)) as ChatsStorage;
+        }
+
+        const raw = await this.utils!.GenerateChannelIdentity(this.cmix.GetID());
+        chatsStorage.push({ raw: raw.toBase64() })
+        const encoded = new TextEncoder().encode(JSON.stringify(chatsStorage));
+        await this.cmix.EKVSet("xxdk-store", encoded)
+        this.dm = await this.makeDMClient(raw)
+        this.totalChats += 1
+    }
+
+    async loadChat(i: number) {
+        const encoded = await this.cmix!.EKVGet("xxdk-store")
+        const decoded = JSON.parse(XXDK.decoder.decode(encoded)) as ChatsStorage;
+        this.totalChats = decoded.length
+        this.dm = await this.makeDMClient(Uint8Array.fromBase64(decoded[i].raw))
+    }
+
+    async send(message: string, recipient: { pubKey: Uint8Array<ArrayBuffer>; token: number; }) {
+        let i = 0;
+        const intervalA = setInterval(async () => {
+            if (await this.cmix.ReadyToSend()) {
+                clearInterval(intervalA);
+                progress.status = `sending`;
+                try {
+                    await this.dm!.SendText(
+                        recipient.pubKey,
+                        recipient.token,
+                        message,
+                        30_000,
+                        new Uint8Array()
+                    )
+                    progress.status = `Message sent!`;
+                } catch (error) {
+                    progress.status = 'message sent failed';
+                }
+                return
+            }
+
+            logger.log(++i, 'not ready to send, waiting...', await this.cmix.ReadyToSend());
+            progress.status = `not ready to send, waiting... (${i})`;
+        }, 5000)
+    }
+}

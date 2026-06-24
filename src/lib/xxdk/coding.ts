@@ -2,7 +2,7 @@
 import DOMPurify from 'dompurify';
 
 import pako from 'pako';
-import { xxdkStore } from '../../store.svelte';
+import { globalStore } from '../../store.svelte';
 import { SANITIZE_CONFIG } from './domSanitize';
 
 
@@ -12,7 +12,7 @@ export async function decodeDmText(
     text: string
 ): Promise<string> {
     try {
-        const decrypted = await xxdkStore.dbCipher!.Decrypt(text);
+        const decrypted = await globalStore.xxdk!.dbCipher.Decrypt(text);
         const decoded = decoder.decode(decrypted);
         try {
             const decompressed = pako.inflate(Uint8Array.fromBase64(decoded));

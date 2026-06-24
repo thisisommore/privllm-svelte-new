@@ -3,7 +3,8 @@
 	import { resolve } from '$app/paths';
 	import { SERVER_PUB_CREDS } from '$lib/api/contants';
 	import { logger } from '$lib/logger';
-	import { initXXDK, loadXXDK, progress, type XXDK } from '$lib/xxdk/index.svelte';
+	import { progress } from '$lib/xxdk/index.svelte';
+	import { XXDK } from '$lib/xxdk/xxdk.svelte';
 	import { globalStore } from '../../store.svelte';
 </script>
 
@@ -15,15 +16,15 @@
 			let xxdk: XXDK;
 
 			if (initDone != 'true') {
-				xxdk = await initXXDK();
+				xxdk = await XXDK.new();
 				globalStore.xxdk = xxdk;
 				logger.log('[privllm] initXXDK completed');
 				localStorage.setItem('INIT_DONE', 'true');
-				let chat = await xxdk.newChat();
-				await chat.send('Hello from SvelteKit!', SERVER_PUB_CREDS);
+				await xxdk.newChat();
+				await xxdk.send('Hello from SvelteKit!', SERVER_PUB_CREDS);
 			} else {
 				logger.log('[privllm] loadXXDK starting');
-				xxdk = await loadXXDK();
+				xxdk = await XXDK.load();
 				globalStore.xxdk = xxdk;
 				await xxdk.loadChat(globalStore.selectedChat);
 			}
