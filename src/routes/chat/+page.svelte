@@ -36,7 +36,7 @@
 
 <h1>Chat</h1>
 <button onclick={newChat}>New Chaty</button>
-{globalStore.xxdk!.totalChats} Chats
+{globalStore.xxdk!.chats.length} Chats
 {#each messages as msg (msg.id)}
 	<div class="message">
 		<div class="header">

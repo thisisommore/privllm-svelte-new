@@ -18,6 +18,7 @@ const getCMixxParams = (baseParams: Uint8Array<ArrayBufferLike>) => {
 type ChatsStorage = {
     //base64
     raw: string
+    title: string
 }[]
 
 type Notifications = Awaited<ReturnType<XXDKUtils["LoadNotificationsDummy"]>>
@@ -29,13 +30,14 @@ export class XXDK {
     dm: DMClient | undefined
     notifications: Notifications;
     dbCipher: DatabaseCipher;
-    totalChats = $state(0);
     status = $state("")
-    constructor(cmix: CMix, utils: XXDKUtils, notifications: Notifications, dbCipher: DatabaseCipher) {
+    chats = $state<ChatsStorage>([])
+    constructor(cmix: CMix, utils: XXDKUtils, notifications: Notifications, dbCipher: DatabaseCipher, chats: ChatsStorage = []) {
         this.cmix = cmix
         this.utils = utils
         this.notifications = notifications
         this.dbCipher = dbCipher
+        this.chats = chats
     }
     static async new() {
         return XXDK.setupXXDK(true)
@@ -46,6 +48,7 @@ export class XXDK {
 
     static async setupXXDK(newCmix: boolean) {
         xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
+
 
         await createKVStore(storageDir);
         const utils = await xxdk.InitXXDK();
@@ -60,6 +63,8 @@ export class XXDK {
             encryptedPassword,
             getCMixxParams(utils.GetDefaultCMixParams())
         );
+
+
         progress.status = 'starting network follower...';
         await cmix.StartNetworkFollower(50000);
         progress.status = 'waiting for network...';
@@ -91,6 +96,15 @@ export class XXDK {
 
         if (total > 0 && registered / total >= 0.2) {
             progress.status = `Node registration threshold met: ${registered}/${total}`;
+        }
+
+        progress.status = `EKV get`;
+        if (!newCmix) {
+            const encoded = await cmix.EKVGet("xxdk-store")
+            const chats = JSON.parse(XXDK.decoder.decode(encoded)) as ChatsStorage;
+            progress.status = `EKV get done`;
+
+            return new XXDK(cmix, utils, notifications, dbCipher, chats)
         }
         return new XXDK(cmix, utils, notifications, dbCipher)
     }
@@ -134,25 +148,15 @@ export class XXDK {
     }
 
     async newChat() {
-        const encodedFetch = await this.EKVGet("xxdk-store")
-        let chatsStorage: ChatsStorage = []
-        if (encodedFetch) {
-            chatsStorage = JSON.parse(XXDK.decoder.decode(encodedFetch)) as ChatsStorage;
-        }
-
         const raw = await this.utils!.GenerateChannelIdentity(this.cmix.GetID());
-        chatsStorage.push({ raw: raw.toBase64() })
-        const encoded = new TextEncoder().encode(JSON.stringify(chatsStorage));
+        this.chats.push({ raw: raw.toBase64(), title: new Date().toDateString() })
+        const encoded = new TextEncoder().encode(JSON.stringify(this.chats));
         await this.cmix.EKVSet("xxdk-store", encoded)
         this.dm = await this.makeDMClient(raw)
-        this.totalChats += 1
     }
 
     async loadChat(i: number) {
-        const encoded = await this.cmix!.EKVGet("xxdk-store")
-        const decoded = JSON.parse(XXDK.decoder.decode(encoded)) as ChatsStorage;
-        this.totalChats = decoded.length
-        this.dm = await this.makeDMClient(Uint8Array.fromBase64(decoded[i].raw))
+        this.dm = await this.makeDMClient(Uint8Array.fromBase64(this.chats[i].raw))
     }
 
     async send(message: string, recipient: { pubKey: Uint8Array<ArrayBuffer>; token: number; }) {
