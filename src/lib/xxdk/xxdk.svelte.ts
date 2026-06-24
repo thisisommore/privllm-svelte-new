@@ -1,11 +1,13 @@
-import { getDb, notifyTableChanged } from "$lib/db"
+import { getDb, notifyTableChanged, type DmMessage } from "$lib/db"
 import { logger } from "$lib/logger"
 import { setTimeoutPromise } from "$lib/utils"
+import { decodeDmText } from '$lib/xxdk/coding';
 
 import xxdk from 'xxdk-wasm';
 const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath, } = xxdk
 import { type CMix, type DatabaseCipher, type DMClient, type XXDKUtils } from "xxdk-wasm"
 import { progress } from "./index.svelte";
+import { liveQuery, type Subscription } from "dexie";
 const storageDir = 'privllm'
 const getCMixxParams = (baseParams: Uint8Array<ArrayBufferLike>) => {
     // Enable immediate sending (matches speakeasy-web v0.4)
@@ -148,16 +150,37 @@ export class XXDK {
         );
     }
 
+    messages = $state<DmMessage[]>([])
+    sub: Subscription | undefined
+    // Decode encrypted rows into display rows. Runs whenever the live query emits.
+    private async decodeRows(rows: DmMessage[]) {
+        this.messages = await Promise.all(
+            rows.map(async (row) => ({
+                ...row,
+                text: await decodeDmText(row.text)
+            }))
+        );
+    }
+
+    private async syncMessages() {
+        if (this.sub)
+            this.sub.unsubscribe()
+        const db = await getDb(this.dm!.GetDatabaseName());
+        this.sub = liveQuery(() => db.messages.toArray()).subscribe((rows) => this.decodeRows(rows));
+    }
+
     async newChat() {
         const raw = await this.utils!.GenerateChannelIdentity(this.cmix.GetID());
         this.chats.push({ raw: raw.toBase64(), title: new Date().toDateString(), id: crypto.randomUUID() })
         const encoded = new TextEncoder().encode(JSON.stringify(this.chats));
         await this.cmix.EKVSet("xxdk-store", encoded)
         this.dm = await this.makeDMClient(raw)
+        this.syncMessages()
     }
 
     async loadChat(i: number) {
         this.dm = await this.makeDMClient(Uint8Array.fromBase64(this.chats[i].raw))
+        this.syncMessages()
     }
 
     async send(message: string, recipient: { pubKey: Uint8Array<ArrayBuffer>; token: number; }) {
