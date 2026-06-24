@@ -4,7 +4,7 @@
 	import { SERVER_PUB_CREDS } from '$lib/api/contants';
 	import { logger } from '$lib/logger';
 	import { initXXDK, loadXXDK, progress, type XXDK } from '$lib/xxdk/index.svelte';
-	import { chatStore, xxdkStore } from '../../store.svelte';
+	import { globalStore } from '../../store.svelte';
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-center">
@@ -16,7 +16,7 @@
 
 			if (initDone != 'true') {
 				xxdk = await initXXDK();
-				xxdkStore.xxdk = xxdk;
+				globalStore.xxdk = xxdk;
 				logger.log('[privllm] initXXDK completed');
 				localStorage.setItem('INIT_DONE', 'true');
 				let chat = await xxdk.newChat();
@@ -24,8 +24,8 @@
 			} else {
 				logger.log('[privllm] loadXXDK starting');
 				xxdk = await loadXXDK();
-				xxdkStore.xxdk = xxdk;
-				await xxdk.loadChat(chatStore.selectedChat);
+				globalStore.xxdk = xxdk;
+				await xxdk.loadChat(globalStore.selectedChat);
 			}
 			await goto(resolve('/chat'));
 		}}>Done</button

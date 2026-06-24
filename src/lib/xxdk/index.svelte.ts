@@ -2,7 +2,7 @@ import { getDb, notifyTableChanged, type DmMessage } from '$lib/db';
 const decoder = new TextDecoder();
 import { logger } from "$lib/logger"
 import xxdk from 'xxdk-wasm';
-import { xxdkStore } from '../../store.svelte';
+import { globalStore, xxdkStore } from '../../store.svelte';
 import { liveQuery } from 'dexie';
 import { decodeDmText } from './coding';
 import { setTimeoutPromise } from '$lib/utils';
@@ -54,7 +54,7 @@ type ChatsStorage = {
     raw: string
 }[]
 async function newChat(): Promise<XXDKChat> {
-    const encodedFetch = await xxdkStore.xxdk?.EKVGet("xxdk-store")
+    const encodedFetch = await globalStore.xxdk?.EKVGet("xxdk-store")
     let chatsStorage: ChatsStorage = []
     if (encodedFetch) {
         chatsStorage = JSON.parse(decoder.decode(encodedFetch)) as ChatsStorage;
