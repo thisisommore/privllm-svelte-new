@@ -85,7 +85,6 @@ export class XXDK {
             725
         );
 
-        await setTimeoutPromise(10_000);
         let statusResult = await cmix.GetNodeRegistrationStatus();
         while (!(statusResult && statusResult instanceof Uint8Array && statusResult.length > 0)) {
             statusResult = await cmix.GetNodeRegistrationStatus();
