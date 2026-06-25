@@ -39,17 +39,25 @@
 						error = 'Password do not match :(';
 						return;
 					}
-					xxdk = await XXDK.new(password);
-					globalStore.xxdk = xxdk;
-					logger.log('[privllm] initXXDK completed');
-					localStorage.setItem('INIT_DONE', 'true');
-					await xxdk.newChat();
-					await xxdk.send('Hello from SvelteKit!', SERVER_PUB_CREDS);
+					try {
+						xxdk = await XXDK.new(password);
+						globalStore.xxdk = xxdk;
+						logger.log('[privllm] initXXDK completed');
+						localStorage.setItem('INIT_DONE', 'true');
+						await xxdk.newChat();
+						await xxdk.send('Hello from SvelteKit!', SERVER_PUB_CREDS);
+					} catch (_error) {
+						error = (_error as Error).message;
+					}
 				} else {
 					logger.log('[privllm] loadXXDK starting');
-					xxdk = await XXDK.load(password);
-					globalStore.xxdk = xxdk;
-					await xxdk.loadChat(0);
+					try {
+						xxdk = await XXDK.load(password);
+						globalStore.xxdk = xxdk;
+						await xxdk.loadChat(0);
+					} catch (_error) {
+						error = (_error as Error).message;
+					}
 				}
 				await goto(resolve('/chat'));
 			}}
