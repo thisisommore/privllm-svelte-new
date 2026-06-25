@@ -8,6 +8,8 @@ const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath, } = xxdk
 import { type CMix, type DatabaseCipher, type DMClient, type XXDKUtils } from "xxdk-wasm"
 import { progress } from "./index.svelte";
 import { liveQuery, type Subscription } from "dexie";
+
+const ErrIncorrectPassword = new Error("Incorrect password")
 const storageDir = 'privllm'
 const getCMixxParams = (baseParams: Uint8Array<ArrayBufferLike>) => {
     // Enable immediate sending (matches speakeasy-web v0.4)
@@ -41,20 +43,28 @@ export class XXDK {
         this.dbCipher = dbCipher
         this.chats = chats
     }
-    static async new() {
-        return XXDK.setupXXDK(true)
+    static async new(password: string) {
+        return XXDK.setupXXDK(true, password)
     }
-    static async load() {
-        return XXDK.setupXXDK(false)
+    static async load(password: string) {
+        return XXDK.setupXXDK(false, password)
     }
 
-    static async setupXXDK(newCmix: boolean) {
+    static async setupXXDK(newCmix: boolean, password: string) {
         xxdk.setXXDKBasePath(`${window.location.origin}/xxdk-wasm`);
-
 
         await createKVStore(storageDir);
         const utils = await xxdk.InitXXDK();
-        const encryptedPassword = await utils.GetOrInitPassword('password');
+        let encryptedPassword: Uint8Array<ArrayBufferLike>
+        try {
+            encryptedPassword = await utils.GetOrInitPassword(password);
+        } catch (error) {
+            if ((error as Error).message.includes("could not decrypt internal password: cannot decrypt with password: chacha20poly1305: message authentication failed")) {
+                throw ErrIncorrectPassword
+            }
+            throw error
+        }
+
         if (newCmix)
             await utils.NewCmix(GetDefaultNDF(), storageDir, encryptedPassword, '');
 
