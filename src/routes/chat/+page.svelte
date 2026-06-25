@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { globalStore } from '../../store.svelte';
 	import { progress } from '$lib/xxdk/index.svelte';
+	import { SERVER_PUB_CREDS } from '$lib/api/contants';
 
 	const newChat = async () => {
 		await globalStore.xxdk!.newChat();
 	};
+	let messageInput = $state('');
 </script>
 
 <button onclick={newChat}>New Chat</button>
@@ -33,8 +35,13 @@
 				<div class="body" class:rich={msg.text}>{@html msg.text}</div>
 			</div>
 		{/each}
-		<input type="text" placeholder="Message ai" />
-		<button>Send</button>
+		<input type="text" placeholder="Message ai" bind:value={messageInput} />
+		<button
+			onclick={() => {
+				globalStore.xxdk?.send(messageInput, SERVER_PUB_CREDS);
+				messageInput = '';
+			}}>Send</button
+		>
 		<div>{progress.isHealthy ? 'Connected' : 'Connecting'}</div>
 	</div>
 </div>
