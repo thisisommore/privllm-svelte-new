@@ -33,7 +33,6 @@ export class XXDK {
     dm: DMClient | undefined
     notifications: Notifications;
     dbCipher: DatabaseCipher;
-    status = $state("")
     chats = $state<ChatsStorage>([])
     constructor(cmix: CMix, utils: XXDKUtils, notifications: Notifications, dbCipher: DatabaseCipher, chats: ChatsStorage = []) {
         this.cmix = cmix
