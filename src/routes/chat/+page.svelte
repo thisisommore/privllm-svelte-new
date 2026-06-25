@@ -7,6 +7,7 @@
 		await globalStore.xxdk!.newChat();
 	};
 	let messageInput = $state('');
+	let messageEl: HTMLDivElement;
 </script>
 
 <div class="h-full overflow-hidden bg-(--bg) font-sans text-(--fg)">
@@ -124,7 +125,10 @@
 											>
 											<span class="h-px flex-1 bg-(--line)"></span>
 										</div>
-										<div class="text-[15px] leading-[1.65] tracking-[-0.003em] text-(--fg)">
+										<div
+											class="text-[15px] leading-[1.65] tracking-[-0.003em] text-(--fg)"
+											bind:this={messageEl}
+										>
 											{@html message.text}
 										</div>
 										<div
@@ -132,6 +136,9 @@
 										>
 											<button
 												class="inline-flex h-6 cursor-pointer items-center gap-1.25 rounded-full border border-(--line) bg-transparent px-2 text-[11px] text-(--fg-3) transition-all duration-150 hover:border-(--fg) hover:text-(--fg)"
+												onclick={() => {
+													navigator.clipboard.writeText(messageEl.textContent);
+												}}
 											>
 												<svg
 													width="12"
