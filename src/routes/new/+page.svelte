@@ -26,7 +26,7 @@
 				logger.log('[privllm] loadXXDK starting');
 				xxdk = await XXDK.load(password);
 				globalStore.xxdk = xxdk;
-				await xxdk.loadChat(globalStore.selectedChat);
+				await xxdk.loadChat(0);
 			}
 			await goto(resolve('/chat'));
 		}}
