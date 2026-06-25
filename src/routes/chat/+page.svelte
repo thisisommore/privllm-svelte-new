@@ -7,7 +7,11 @@
 		await globalStore.xxdk!.newChat();
 	};
 	let messageInput = $state('');
-	let messageEl: HTMLDivElement;
+	function copyTextFromHtml(html: string) {
+		const tmp = document.createElement('div');
+		tmp.innerHTML = html;
+		navigator.clipboard.writeText(tmp.textContent ?? '');
+	}
 </script>
 
 <div class="h-full overflow-hidden bg-(--bg) font-sans text-(--fg)">
@@ -131,36 +135,12 @@
 										>
 											{@html message.text}
 										</div>
-										<div
-											class="mt-3.5 flex gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-										>
-											<button
-												class="inline-flex h-6 cursor-pointer items-center gap-1.25 rounded-full border border-(--line) bg-transparent px-2 text-[11px] text-(--fg-3) transition-all duration-150 hover:border-(--fg) hover:text-(--fg)"
-												onclick={() => {
-													navigator.clipboard.writeText(messageEl.textContent);
-												}}
-											>
-												<svg
-													width="12"
-													height="12"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-													<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-												</svg>
-												<span class="text-[11px]">Copy</span>
-											</button>
-										</div>
+										{@render CopyButton(message.text)}
 									</div>
 								</div>
 							{:else}
 								<!-- User message -->
-								<div class="relative cursor-pointer bg-transparent">
+								<div class="group relative cursor-pointer bg-transparent">
 									<div class="mx-auto max-w-185 px-7 py-6">
 										<div
 											class="mb-2.5 flex items-center gap-2.5 font-mono text-[10px] tracking-[0.14em] uppercase"
@@ -175,6 +155,7 @@
 										<div class="text-[15px] leading-[1.65] tracking-[-0.003em] text-(--fg)">
 											{message.text}
 										</div>
+										{@render CopyButton(message.text)}
 									</div>
 								</div>
 							{/if}
@@ -264,3 +245,31 @@
 		</main>
 	</div>
 </div>
+
+{#snippet CopyButton(text: string)}
+	<div
+		class="mt-3.5 flex gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+	>
+		<button
+			class="inline-flex h-6 cursor-pointer items-center gap-1.25 rounded-full border border-(--line) bg-transparent px-2 text-[11px] text-(--fg-3) transition-all duration-150 hover:border-(--fg) hover:text-(--fg)"
+			onclick={() => {
+				copyTextFromHtml(text);
+			}}
+		>
+			<svg
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+				<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+			</svg>
+			<span class="text-[11px]">Copy</span>
+		</button>
+	</div>
+{/snippet}
