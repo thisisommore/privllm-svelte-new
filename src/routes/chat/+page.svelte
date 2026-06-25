@@ -88,12 +88,12 @@
 				>
 					<span class="inline-flex shrink-0 items-center gap-1">
 						<span class="font-mono text-xs font-medium tracking-tight">12.45</span>
-						<span class="font-mono text-[10px] uppercase tracking-widest text-(--fg-3)">XX</span>
+						<span class="font-mono text-[10px] tracking-widest text-(--fg-3) uppercase">XX</span>
 					</span>
 					<span class="min-w-2 flex-1"></span>
 					<span class="relative inline-flex shrink-0 items-center overflow-hidden">
 						<span
-							class="font-mono text-[11px] whitespace-nowrap tracking-tight text-(--fg) transition-all duration-150"
+							class="font-mono text-[11px] tracking-tight whitespace-nowrap text-(--fg) transition-all duration-150"
 							>0x7a3f…9c2b</span
 						>
 					</span>
@@ -125,7 +125,7 @@
 											<span class="h-px flex-1 bg-(--line)"></span>
 										</div>
 										<div class="text-[15px] leading-[1.65] tracking-[-0.003em] text-(--fg)">
-											{message.text}
+											{@html message.text}
 										</div>
 										<div
 											class="mt-3.5 flex gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
@@ -158,8 +158,7 @@
 										<div
 											class="mb-2.5 flex items-center gap-2.5 font-mono text-[10px] tracking-[0.14em] uppercase"
 										>
-											<span class="inline-flex items-center gap-2 font-medium text-(--fg)"
-												>You</span
+											<span class="inline-flex items-center gap-2 font-medium text-(--fg)">You</span
 											>
 											<span class="font-normal text-(--fg-3)"
 												>{new Date(message.timestamp).toLocaleTimeString()}</span
