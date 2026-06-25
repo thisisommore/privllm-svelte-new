@@ -30,6 +30,7 @@
 			<div class="message">
 				<div class="header">
 					<span class="role">{msg.status}</span>
+					{msg.sender_pub_key == SERVER_PUB_CREDS.pubKey.toBase64() ? 'BOT' : 'HUMAN'}
 					<span class="timestamp">{new Date(msg.timestamp).toLocaleString()}</span>
 				</div>
 				<div class="body" class:rich={msg.text}>{@html msg.text}</div>
