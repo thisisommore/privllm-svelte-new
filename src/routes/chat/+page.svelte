@@ -129,10 +129,7 @@
 											>
 											<span class="h-px flex-1 bg-(--line)"></span>
 										</div>
-										<div
-											class="text-[15px] leading-[1.65] tracking-[-0.003em] text-(--fg)"
-											bind:this={messageEl}
-										>
+										<div class="text-[15px] leading-[1.65] tracking-[-0.003em] text-(--fg)">
 											{@html message.text}
 										</div>
 										{@render CopyButton(message.text)}
