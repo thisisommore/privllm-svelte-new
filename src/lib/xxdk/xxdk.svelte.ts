@@ -36,6 +36,7 @@ export class XXDK {
     notifications: Notifications;
     dbCipher: DatabaseCipher;
     chats = $state<ChatsStorage>([])
+    activeChatId = $state("")
     constructor(cmix: CMix, utils: XXDKUtils, notifications: Notifications, dbCipher: DatabaseCipher, chats: ChatsStorage = []) {
         this.cmix = cmix
         this.utils = utils
@@ -179,7 +180,9 @@ export class XXDK {
 
     async newChat() {
         const raw = await this.utils!.GenerateChannelIdentity(this.cmix.GetID());
-        this.chats.push({ raw: raw.toBase64(), title: new Date().toDateString(), id: crypto.randomUUID() })
+        const id = crypto.randomUUID()
+        this.chats.push({ raw: raw.toBase64(), title: new Date().toDateString(), id: id })
+        this.activeChatId = id
         const encoded = new TextEncoder().encode(JSON.stringify(this.chats));
         await this.cmix.EKVSet("xxdk-store", encoded)
         this.dm = await this.makeDMClient(raw)
@@ -189,6 +192,7 @@ export class XXDK {
     async loadChat(i: number) {
         this.dm = await this.makeDMClient(Uint8Array.fromBase64(this.chats[i].raw))
         this.syncMessages()
+        this.activeChatId = this.chats[i].id
     }
 
     async send(message: string, recipient: { pubKey: Uint8Array<ArrayBuffer>; token: number; }) {

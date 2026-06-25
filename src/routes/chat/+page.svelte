@@ -12,7 +12,7 @@
 	<div>
 		{#each globalStore.xxdk!.chats as c, i (c.id)}
 			<div
-				class="message bg-pink-400"
+				class={['message', globalStore.xxdk!.activeChatId == c.id ? 'bg-pink-400' : 'bg-green-400']}
 				onclick={() => {
 					globalStore.xxdk?.loadChat(i);
 				}}
