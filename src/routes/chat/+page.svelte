@@ -24,18 +24,12 @@
 					{#each globalStore.xxdk!.chats as c, i (c.id)}
 						{@const isActive = globalStore.xxdk!.activeChatId === c.id}
 						<button
-							class="flex w-full cursor-pointer items-center gap-2.5 rounded-[5px] px-2.5 py-1.75 text-left text-[13px] leading-tight transition-all duration-150"
-							class:relative={isActive}
-							class:border-(--fg)={isActive}
-							class:bg-(--fg)={isActive}
-							class:font-medium={isActive}
-							class:text-(--bg)={isActive}
-							class:border-(--line-2)={!isActive}
-							class:bg-(--bg-elev)={!isActive}
-							class:text-(--fg-2)={!isActive}
-							class:hover:border-(--line)={!isActive}
-							class:hover:bg-(--bg-elev-2)={!isActive}
-							class:hover:text-(--fg)={!isActive}
+							class={[
+								'flex w-full cursor-pointer items-center gap-2.5 rounded-[5px] px-2.5 py-1.75 text-left text-[13px] leading-tight transition-all duration-150',
+								isActive
+									? 'relative border-(--fg) bg-(--fg) font-medium text-(--bg)'
+									: 'border-(--line-2) bg-(--bg-elev) text-(--fg-2) hover:border-(--line) hover:bg-(--bg-elev-2) hover:text-(--fg)'
+							]}
 							onclick={() => {
 								globalStore.xxdk?.loadChat(i);
 							}}
