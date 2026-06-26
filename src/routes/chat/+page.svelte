@@ -203,6 +203,7 @@
 							bg-(--fg) px-3 text-xs font-medium text-(--bg) transition-opacity duration-150
 							disabled:bg-(--fg-4)"
 							onclick={async () => {
+								if (messageInput.trim() == '') return;
 								try {
 									isSending = true;
 									await globalStore.xxdk?.send(messageInput, SERVER_PUB_CREDS);
