@@ -2,7 +2,7 @@
 	import { globalStore } from '../../store.svelte';
 	import { progress } from '$lib/xxdk/index.svelte';
 	import { SERVER_PUB_CREDS } from '$lib/api/contants';
-
+	let isSending = $state(false);
 	const newChat = async () => {
 		await globalStore.xxdk!.newChat();
 	};
@@ -169,10 +169,13 @@
 					class="pointer-events-auto relative mx-auto max-w-185 rounded-[14px] border border-(--line) bg-(--bg-elev) pt-3 pr-3 pb-2.5 pl-4 shadow-(--shadow) transition-colors duration-150"
 				>
 					<textarea
-						class="max-h-75 min-h-6 w-full resize-none border-0 bg-transparent px-0 py-1 font-sans text-[15px] leading-normal text-(--fg) outline-none"
+						class="max-h-75 min-h-6 w-full resize-none border-0 bg-transparent
+						px-0 py-1 font-sans text-[15px] leading-normal text-(--fg) outline-none
+						disabled:text-(--fg-3)"
 						rows="1"
 						placeholder="Ask anything - type / for commands"
 						bind:value={messageInput}
+						disabled={isSending}
 					></textarea>
 					<div class="mt-1.5 flex items-center justify-between">
 						<div class="flex items-center gap-0.5">
@@ -196,13 +199,21 @@
 							</button>
 						</div>
 						<button
-							class="inline-flex h-7.5 cursor-pointer items-center gap-2.5 rounded-md bg-(--fg) px-3 text-xs font-medium text-(--bg) transition-opacity duration-150"
-							onclick={() => {
-								globalStore.xxdk?.send(messageInput, SERVER_PUB_CREDS);
-								messageInput = '';
+							class="inline-flex h-7.5 cursor-pointer items-center gap-2.5 rounded-md
+							bg-(--fg) px-3 text-xs font-medium text-(--bg) transition-opacity duration-150
+							disabled:bg-(--fg-4)"
+							onclick={async () => {
+								try {
+									isSending = true;
+									await globalStore.xxdk?.send(messageInput, SERVER_PUB_CREDS);
+									messageInput = '';
+								} finally {
+									isSending = false;
+								}
 							}}
+							disabled={isSending}
 						>
-							Send
+							{isSending ? 'Sending' : 'Send'}
 							<svg
 								width="13"
 								height="13"
