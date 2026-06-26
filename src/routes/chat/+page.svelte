@@ -2,6 +2,7 @@
 	import { globalStore } from '../../store.svelte';
 	import { progress } from '$lib/xxdk/index.svelte';
 	import { SERVER_PUB_CREDS } from '$lib/api/contants';
+	import { onMount, tick } from 'svelte';
 	let isSending = $state(false);
 	const newChat = async () => {
 		await globalStore.xxdk!.newChat();
@@ -12,6 +13,28 @@
 		tmp.innerHTML = html;
 		navigator.clipboard.writeText(tmp.textContent ?? '');
 	}
+	let viewport: HTMLDivElement;
+	onMount(async () => {
+		await tick();
+		viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'instant' });
+	});
+
+	let chatChanged = $state(true);
+	$effect.pre(() => {
+		globalStore.xxdk?.messages; // depend on messages
+		const autoscroll =
+			viewport && viewport.offsetHeight + viewport.scrollTop > viewport.scrollHeight - 50;
+
+		if (autoscroll) {
+			tick().then(() => {
+				viewport.scrollTo({
+					top: viewport.scrollHeight,
+					behavior: chatChanged ? 'instant' : 'smooth'
+				});
+				chatChanged = false;
+			});
+		}
+	});
 </script>
 
 <div class="h-full overflow-hidden bg-(--bg) font-sans text-(--fg)">
@@ -35,8 +58,9 @@
 									? 'relative border-(--fg) bg-(--fg) font-medium text-(--bg)'
 									: 'border-(--line-2) bg-(--bg-elev) text-(--fg-2) hover:border-(--line) hover:bg-(--bg-elev-2) hover:text-(--fg)'
 							]}
-							onclick={() => {
-								globalStore.xxdk?.loadChat(i);
+							onclick={async () => {
+								chatChanged = true;
+								await globalStore.xxdk?.loadChat(i);
 							}}
 						>
 							{#if isActive}
@@ -109,7 +133,7 @@
 		<!-- Main chat -->
 		<main class="relative flex h-full min-h-0 min-w-0 flex-col bg-(--bg)">
 			<!-- Messages -->
-			<div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+			<div class="flex min-h-0 flex-1 flex-col overflow-y-auto" bind:this={viewport}>
 				<div class="flex flex-1 flex-col pb-40">
 					<div class="min-h-0 flex-1"></div>
 					<div class="flex flex-none flex-col">
