@@ -2,7 +2,7 @@
 	import { globalStore } from '../../store.svelte';
 	import { progress } from '$lib/xxdk/index.svelte';
 	import { SERVER_PUB_CREDS } from '$lib/api/contants';
-	import { onMount, tick } from 'svelte';
+	import { tick } from 'svelte';
 	import Ui from './ui.svelte';
 	let isSending = $state(false);
 	const newChat = async () => {
@@ -11,10 +11,6 @@
 	let messageInput = $state('');
 
 	let viewport: HTMLDivElement | undefined = $state();
-	onMount(async () => {
-		await tick();
-		viewport?.scrollTo({ top: viewport.scrollHeight, behavior: 'instant' });
-	});
 
 	let chatChanged = $state(true);
 	$effect.pre(() => {
