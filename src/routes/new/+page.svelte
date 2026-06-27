@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { globalStore } from '../../store.svelte';
 	import UI, { type Props } from './ui.svelte';
+	import { createWallet, saveWallet } from '$lib/wallet';
 	let password = $state('');
 	let confirmPassword = $state<Props['confirmPassword']>({
 		input: '',
@@ -43,6 +44,10 @@
 						xxdk = await XXDK.new(password);
 						globalStore.xxdk = xxdk;
 						logger.log('[privllm] initXXDK completed');
+						const wallet = await createWallet();
+						await saveWallet(wallet);
+
+						console.log('loaded address:', wallet.address);
 						localStorage.setItem('INIT_DONE', 'true');
 						await xxdk.newChat();
 						await xxdk.send('Hello from SvelteKit!', SERVER_PUB_CREDS);
