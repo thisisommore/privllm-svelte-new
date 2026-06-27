@@ -10,7 +10,8 @@
 	};
 	let messageInput = $state('');
 
-	let viewport: HTMLDivElement | undefined = $state();
+	// svelte-ignore non_reactive_update
+	let viewport: HTMLDivElement;
 
 	let chatChanged = $state(true);
 	$effect.pre(() => {
@@ -18,7 +19,7 @@
 		const autoscroll =
 			viewport && viewport.offsetHeight + viewport.scrollTop > viewport.scrollHeight - 50;
 
-		if (autoscroll || (chatChanged && viewport != undefined)) {
+		if (autoscroll || chatChanged) {
 			tick().then(() => {
 				viewport.scrollTo({
 					top: viewport.scrollHeight,
