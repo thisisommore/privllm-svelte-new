@@ -10,8 +10,7 @@
 	};
 	let messageInput = $state('');
 
-	// svelte-ignore non_reactive_update
-	let viewport: HTMLDivElement;
+	let viewport: HTMLDivElement | undefined = $state();
 	onMount(async () => {
 		await tick();
 		viewport?.scrollTo({ top: viewport.scrollHeight, behavior: 'instant' });
@@ -23,7 +22,7 @@
 		const autoscroll =
 			viewport && viewport.offsetHeight + viewport.scrollTop > viewport.scrollHeight - 50;
 
-		if (autoscroll) {
+		if (autoscroll || (chatChanged && viewport != undefined)) {
 			tick().then(() => {
 				viewport.scrollTo({
 					top: viewport.scrollHeight,
