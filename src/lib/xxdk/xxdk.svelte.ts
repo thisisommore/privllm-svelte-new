@@ -203,23 +203,21 @@ export class XXDK {
         while (!await this.cmix.ReadyToSend()) {
             logger.log(++i, 'not ready to send, waiting...', await this.cmix.ReadyToSend());
             progress.status = `not ready to send, waiting... (${i})`;
-            setTimeoutPromise(5000)
+            await setTimeoutPromise(5000)
         }
-        if (await this.cmix.ReadyToSend()) {
-            progress.status = `sending`;
-            try {
-                await this.dm!.SendText(
-                    recipient.pubKey,
-                    recipient.token,
-                    message,
-                    30_000,
-                    new Uint8Array()
-                )
-                progress.status = `Message sent!`;
-            } catch (error) {
-                progress.status = 'message sent failed';
-            }
-            return
+        progress.status = `sending`;
+        try {
+            await this.dm!.SendText(
+                recipient.pubKey,
+                recipient.token,
+                message,
+                30_000,
+                new Uint8Array()
+            )
+            progress.status = `Message sent!`;
+        } catch (error) {
+            progress.status = 'message sent failed';
         }
+        return
     }
 }
