@@ -82,7 +82,8 @@ export class XXDK {
         await cmix.StartNetworkFollower(50000);
         progress.status = 'waiting for network...';
 
-        await cmix.WaitForNetwork(10 * 60 * 1000);
+        if (newCmix)
+            await cmix.WaitForNetwork(10 * 60 * 1000);
         cmix.AddHealthCallback({
             Callback: healthy => progress.isHealthy = healthy
         });
@@ -95,19 +96,21 @@ export class XXDK {
             725
         );
 
-        let statusResult = await cmix.GetNodeRegistrationStatus();
-        while (!(statusResult && statusResult instanceof Uint8Array && statusResult.length > 0)) {
-            statusResult = await cmix.GetNodeRegistrationStatus();
-            await setTimeoutPromise(5_000);
-        }
+        if (newCmix) {
+            let statusResult = await cmix.GetNodeRegistrationStatus();
+            while (!(statusResult && statusResult instanceof Uint8Array && statusResult.length > 0)) {
+                statusResult = await cmix.GetNodeRegistrationStatus();
+                await setTimeoutPromise(5_000);
+            }
 
-        const report = JSON.parse(XXDK.decoder.decode(statusResult));
-        const registered = report.NumberOfNodesRegistered;
-        const total = report.NumberOfNodes;
-        progress.status = `Node registration progress: ${registered}/${total}`;
+            const report = JSON.parse(XXDK.decoder.decode(statusResult));
+            const registered = report.NumberOfNodesRegistered;
+            const total = report.NumberOfNodes;
+            progress.status = `Node registration progress: ${registered}/${total}`;
 
-        if (total > 0 && registered / total >= 0.2) {
-            progress.status = `Node registration threshold met: ${registered}/${total}`;
+            if (total > 0 && registered / total >= 0.2) {
+                progress.status = `Node registration threshold met: ${registered}/${total}`;
+            }
         }
 
         progress.status = `EKV get`;
