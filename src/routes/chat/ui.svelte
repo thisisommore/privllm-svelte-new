@@ -2,6 +2,7 @@
 	import { SERVER_PUB_CREDS } from '$lib/api/contants';
 	import { progress } from '$lib/xxdk/index.svelte';
 	import { globalStore } from '../../store.svelte';
+	import Popup from './popup.svelte';
 	export type Props = {
 		newChat: () => void;
 		selectChat: (i: number) => void;
@@ -142,8 +143,8 @@
 				<div
 					class="pointer-events-auto mx-auto mt-2.5 flex max-w-185 items-center justify-between px-1 font-mono text-[10px] text-(--fg-3)"
 				>
-					<div class="flex gap-3">
-						<span class="group relative cursor-default">
+					<div class="group flex cursor-pointer gap-3">
+						<span class="relative">
 							<span
 								class={[
 									'inline-block h-1.25 w-1.25 rounded-full',
@@ -151,7 +152,8 @@
 									!progress.isHealthy && 'bg-orange-400'
 								]}
 							></span>
-							{progress.isHealthy ? 'Connected' : 'Disconnected'}
+							<Popup />
+							{globalStore.xxdk?.events.at(-1)?.event}
 						</span>
 					</div>
 					<div>

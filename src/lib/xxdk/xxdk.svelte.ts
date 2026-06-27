@@ -8,6 +8,7 @@ const { createKVStore, GetDefaultNDF, dmIndexedDbWorkerPath, } = xxdk
 import { type CMix, type DatabaseCipher, type DMClient, type XXDKUtils } from "xxdk-wasm"
 import { progress } from "./index.svelte";
 import { liveQuery, type Subscription } from "dexie";
+import { SvelteDate } from "svelte/reactivity";
 
 const ErrIncorrectPassword = new Error("Incorrect password")
 const storageDir = 'privllm'
@@ -25,6 +26,7 @@ type ChatsStorage = {
     title: string
     id: string
 }[]
+type Event = { id: string, event: string, time: Date }
 
 type Notifications = Awaited<ReturnType<XXDKUtils["LoadNotificationsDummy"]>>
 export class XXDK {
@@ -37,12 +39,35 @@ export class XXDK {
     dbCipher: DatabaseCipher;
     chats = $state<ChatsStorage>([])
     activeChatId = $state("")
+    upTime: SvelteDate | undefined = $state()
+    events = $state<Event[]>([])
+    reportEvent(e: string) {
+        if (this.events.length == 5) {
+            this.events.shift()
+        }
+        this.events.push({ id: crypto.randomUUID(), event: e, time: new Date() })
+    }
+    isFirstDisconnection = true
     constructor(cmix: CMix, utils: XXDKUtils, notifications: Notifications, dbCipher: DatabaseCipher, chats: ChatsStorage = []) {
         this.cmix = cmix
         this.utils = utils
         this.notifications = notifications
         this.dbCipher = dbCipher
         this.chats = chats
+        this.reportEvent("initializing")
+        cmix.AddHealthCallback({
+            Callback: healthy => {
+                if (healthy) {
+                    this.reportEvent("connected")
+                    this.upTime = new SvelteDate()
+                } else if (!this.isFirstDisconnection) {
+                    this.reportEvent("disconnected")
+                    this.upTime = undefined
+                }
+                this.isFirstDisconnection = false
+                progress.isHealthy = healthy
+            }
+        });
     }
     static async new(password: string) {
         return XXDK.setupXXDK(true, password)
@@ -84,9 +109,7 @@ export class XXDK {
 
         if (newCmix)
             await cmix.WaitForNetwork(10 * 60 * 1000);
-        cmix.AddHealthCallback({
-            Callback: healthy => progress.isHealthy = healthy
-        });
+
 
         const notifications = await utils!.LoadNotificationsDummy(cmix.GetID());
 
